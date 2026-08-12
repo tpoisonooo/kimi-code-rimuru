@@ -2,6 +2,9 @@
 
 <img width="800" alt="Image" src="https://github.com/user-attachments/assets/bc8c2c21-1fcb-4fd9-a8ce-a278b6e8160c" />
 
+## Affects
+Insert `skin.js` into the kimi-code dist-web frontend with no side effects on agents.
+
 ## How to install
 
 All in one python file:
