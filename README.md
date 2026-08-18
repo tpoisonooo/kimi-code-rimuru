@@ -5,6 +5,13 @@
 ## Affects
 Insert `skin.js` into the kimi-code dist-web frontend with no side effects on agents.
 
+The skin is a 2.5D mesh puppet: the sprite is triangulated once (quadtree grid,
+contour-snapped), and a handful of hand-annotated control points drive the coat
+hem corners, hair tips, boot fur and cuff fur via compact-falloff IDW; the sword
+tassel is a separate strip-warped patch so the bead stays rigid. Everything else
+is guaranteed static. Static triangles are baked to an offscreen canvas, so each
+frame only re-renders the deforming ones.
+
 ## How to install
 
 All in one python file:
@@ -30,3 +37,33 @@ Notes:
     The installer stamps version + bundle fingerprint into rimuru-skin/.stamp.json
     and warns on re-apply; --check reports CHANGED in that case. 
 ```
+
+## How it's made (`mesh/`)
+
+Full pipeline + results live in `mesh/`:
+
+- `build_mesh.py` — sprite → quadtree grid mesh (28/14/7px), contour snapping,
+  coverage QA (≥99%), control glue, per-label amplitude normalization
+- `controls.json` — hand-annotated control points (via `annotate.html`)
+- `render_mesh_preview.py` — offline renderer → `preview.gif` + stills
+- `viewer.tpl.html` / `viewer.html` — standalone animation page
+- `annotate.tpl.html` / `annotate.html` — control-point annotation tool
+- `mesh.json`, `mesh_debug.png` — generated mesh + overlay
+- `sprite.png` / `sprite_meshed.png` / `tassel_patch.png` — keyed sprite assets
+
+Rebuild after edits:
+
+```
+python3 build_mesh.py && python3 render_mesh_preview.py && python3 make_viewer.py
+```
+
+Note: the character artwork is official material — fine for internal use,
+swap in your own licensed art before public redistribution (the pipeline is
+artwork-agnostic).
+
+## Acknowledgments
+
+The triangulation approach (regular grid cells split into triangles, no long
+cross-part edges) is inspired by
+[ImageToMeshAnim](https://github.com/windsmoon/ImageToMeshAnim) —
+thanks for the great write-up on image-to-mesh vertex animation.

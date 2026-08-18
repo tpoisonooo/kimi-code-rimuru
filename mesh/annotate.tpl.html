@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Rimuru mesh 控制点标注</title>
+<style>
+  body { margin: 0; font: 13px/1.5 system-ui, sans-serif; background: #1e2024; color: #ccd; display: flex; height: 100vh; }
+  #side { width: 300px; padding: 12px; overflow-y: auto; flex: none; }
+  #side h1 { font-size: 15px; margin: 4px 0 10px; }
+  #view { flex: 1; overflow: auto; background: #2a2d33; }
+  canvas { display: block; margin: 12px; cursor: crosshair; }
+  .lab { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; color: #fff; }
+  .lab.on { border-color: #fff; }
+  button, select { background: #33373d; color: #ccd; border: 1px solid #4a4f57; border-radius: 6px; padding: 3px 10px; cursor: pointer; margin: 2px 0; }
+  textarea { width: 100%; height: 180px; background: #14161a; color: #9fb; border: 1px solid #3a3f47; font: 11px/1.4 monospace; }
+  .hint { color: #889; font-size: 12px; }
+  #plist { margin: 6px 0; max-height: 26vh; overflow-y: auto; }
+  #plist div { margin: 2px 0; cursor: pointer; }
+  #plist div.sel { outline: 1px solid #ddd; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="side">
+  <h1>控制点标注</h1>
+  <div class="hint">
+    左键空白处：放到最近的网格顶点上（用当前标签）<br>
+    拖动圆心：换绑顶点 · 拖动箭头末端方块：调摆幅<br>
+    滚轮在点上：调影响半径（亮起的顶点随之变化）<br>
+    右键点 / 列表「删」/「撤销上个点」：删除<br>
+    标完点「复制 JSON」发给我。
+  </div>
+  <p>标签：<span id="labels"></span></p>
+  <p><label><input type="checkbox" id="showmesh" checked> 显示三角网格</label></p>
+  <p>缩放：<select id="zoom"><option value="1">1x</option><option value="2" selected>2x</option><option value="3">3x</option></select>
+     <span id="coord" class="hint"></span></p>
+  <p>
+    <button id="copy">复制 JSON</button>
+    <button id="dl">下载 controls.json</button>
+    <button id="imp">从文本框导入</button>
+    <button id="undo">撤销上个点</button>
+    <button id="clr">清空</button>
+  </p>
+  <div id="plist"></div>
+  <textarea id="json" spellcheck="false"></textarea>
+</div>
+<div id="view"><canvas id="cv"></canvas></div>
+<script>
+const SPRITE = "__SPRITE_B64__";
+const MESH = __MESH_JSON__;
+const W = 400, H = 618;
+const LABELS = { tassel: "#e91e63", hair_tip: "#2196f3", hem: "#43a047",
+                 boot_fur: "#fb8c00", cuff: "#8e24aa", other: "#78909c" };
+const SNAP_PX = 30;
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+let scale = 2, points = [], curLabel = "hem", drag = null, selected = -1, hoverV = -1;
+let showMesh = true;
+const img = new Image();
+img.onload = () => { resize(); draw(); };
+img.src = SPRITE;
+
+function resize() { cv.width = W * scale; cv.height = H * scale; }
+
+function nearestVertex(px, py) {
+  let best = -1, bd = Infinity;
+  for (let i = 0; i < MESH.points.length; i++) {
+    const d = Math.hypot(MESH.points[i][0] - px, MESH.points[i][1] - py);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return { v: best, d: bd };
+}
+
+function smooth01(u) { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); }
+
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.imageSmoothingEnabled = scale < 3;
+  ctx.drawImage(img, 0, 0, cv.width, cv.height);
+
+  if (showMesh) {
+    ctx.strokeStyle = "rgba(80,220,120,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const [a, b, c] of MESH.tris) {
+      const pa = MESH.points[a], pb = MESH.points[b], pc = MESH.points[c];
+      ctx.moveTo(pa[0] * scale, pa[1] * scale);
+      ctx.lineTo(pb[0] * scale, pb[1] * scale);
+      ctx.lineTo(pc[0] * scale, pc[1] * scale);
+      ctx.closePath();
+    }
+    ctx.stroke();
+  }
+
+  // vertices affected by the selected control, brightness = falloff weight
+  if (selected >= 0 && points[selected]) {
+    const p = points[selected];
+    const px = p.x * W, py = p.y * H;
+    for (let i = 0; i < MESH.points.length; i++) {
+      const d = Math.hypot(MESH.points[i][0] - px, MESH.points[i][1] - py);
+      if (d <= p.r) {
+        const w = smooth01(1 - d / p.r);
+        ctx.fillStyle = `rgba(255,235,60,${(0.15 + 0.85 * w).toFixed(2)})`;
+        ctx.beginPath(); ctx.arc(MESH.points[i][0] * scale, MESH.points[i][1] * scale, 2.2 * scale, 0, 7); ctx.fill();
+      }
+    }
+  }
+
+  // snap candidate under cursor
+  if (hoverV >= 0 && !drag) {
+    const v = MESH.points[hoverV];
+    ctx.strokeStyle = "#ffee55"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(v[0] * scale, v[1] * scale, 5 * scale, 0, 7); ctx.stroke();
+  }
+
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const x = p.x * W * scale, y = p.y * H * scale, c = LABELS[p.label] || "#999";
+    ctx.strokeStyle = c; ctx.globalAlpha = 0.55; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y, p.r * scale, 0, 7); ctx.stroke();
+    ctx.globalAlpha = 1;
+    const ax = x + p.dx * scale, ay = y + p.dy * scale;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ax, ay); ctx.stroke();
+    ctx.fillStyle = c;
+    ctx.fillRect(ax - 2 * scale, ay - 2 * scale, 4 * scale, 4 * scale);
+    ctx.beginPath(); ctx.arc(x, y, 3 * scale, 0, 7); ctx.fill();
+    if (i === selected) {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 5.5 * scale, 0, 7); ctx.stroke();
+    }
+    ctx.font = `${6 * scale + 6}px system-ui`;
+    ctx.fillText(`${p.label} (${p.x.toFixed(3)}, ${p.y.toFixed(3)})`, x + 6 * scale, y - 6 * scale);
+  }
+}
+
+function pos(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / (W * scale), y: (e.clientY - r.top) / (H * scale) };
+}
+function hit(e) {
+  const m = pos(e);
+  for (let i = points.length - 1; i >= 0; i--) {
+    const p = points[i];
+    const ax = p.x + p.dx / W, ay = p.y + p.dy / H;
+    if (Math.hypot((m.x - ax) * W, (m.y - ay) * H) < 8) return { i, mode: "amp" };
+    if (Math.hypot((m.x - p.x) * W, (m.y - p.y) * H) < 8) return { i, mode: "move" };
+  }
+  return null;
+}
+
+cv.addEventListener("mousedown", e => {
+  const h = hit(e);
+  if (h) { drag = h; selected = h.i; sync(); draw(); return; }
+  const m = pos(e);
+  const { v, d } = nearestVertex(m.x * W, m.y * H);
+  if (v < 0 || d > SNAP_PX) return;
+  const vp = MESH.points[v];
+  points.push({ label: curLabel, v, x: +(vp[0] / W).toFixed(4), y: +(vp[1] / H).toFixed(4), r: 40, dx: 2, dy: 0 });
+  selected = points.length - 1;
+  sync(); draw();
+});
+cv.addEventListener("mousemove", e => {
+  const m = pos(e);
+  document.getElementById("coord").textContent = `(${(m.x).toFixed(3)}, ${(m.y).toFixed(3)})`;
+  if (!drag) {
+    const { v, d } = nearestVertex(m.x * W, m.y * H);
+    const nv = d <= SNAP_PX ? v : -1;
+    if (nv !== hoverV) { hoverV = nv; draw(); }
+    return;
+  }
+  const p = points[drag.i];
+  if (drag.mode === "move") {
+    const { v } = nearestVertex(m.x * W, m.y * H);   // glue to nearest mesh vertex
+    if (v >= 0) { p.v = v; p.x = +(MESH.points[v][0] / W).toFixed(4); p.y = +(MESH.points[v][1] / H).toFixed(4); }
+  } else {
+    p.dx = Math.round((m.x - p.x) * W); p.dy = Math.round((m.y - p.y) * H);
+  }
+  sync(); draw();
+});
+addEventListener("mouseup", () => drag = null);
+cv.addEventListener("contextmenu", e => {
+  e.preventDefault();
+  const h = hit(e);
+  if (h) { points.splice(h.i, 1); if (selected >= points.length) selected = points.length - 1; sync(); draw(); }
+});
+cv.addEventListener("wheel", e => {
+  const h = hit(e) || (selected >= 0 ? { i: selected } : null);
+  if (!h) return;
+  e.preventDefault();
+  const p = points[h.i];
+  const step = p.r < 20 ? 1 : 5;   // 小半径细调
+  p.r = Math.max(5, Math.min(150, p.r + (e.deltaY < 0 ? step : -step)));
+  selected = h.i;
+  sync(); draw();
+}, { passive: false });
+
+const labBox = document.getElementById("labels");
+for (const [name, color] of Object.entries(LABELS)) {
+  const s = document.createElement("span");
+  s.className = "lab" + (name === curLabel ? " on" : "");
+  s.style.background = color; s.textContent = name;
+  s.onclick = () => { curLabel = name; document.querySelectorAll(".lab").forEach(x => x.classList.remove("on")); s.classList.add("on"); };
+  labBox.appendChild(s);
+}
+document.getElementById("zoom").onchange = e => { scale = +e.target.value; resize(); draw(); };
+document.getElementById("showmesh").onchange = e => { showMesh = e.target.checked; draw(); };
+
+function sync() { document.getElementById("json").value = JSON.stringify({ points }, null, 1); renderList(); }
+function renderList() {
+  const box = document.getElementById("plist");
+  box.innerHTML = "";
+  points.forEach((p, i) => {
+    const row = document.createElement("div");
+    if (i === selected) row.className = "sel";
+    const c = LABELS[p.label] || "#999";
+    row.innerHTML = `<span style="color:${c}">●</span> ${p.label} (${p.x.toFixed(3)}, ${p.y.toFixed(3)}) v${p.v} `;
+    row.onclick = () => { selected = i; sync(); draw(); };
+    const btn = document.createElement("button");
+    btn.textContent = "删";
+    btn.style.padding = "0 6px";
+    btn.onclick = ev => { ev.stopPropagation(); points.splice(i, 1); if (selected >= points.length) selected = points.length - 1; sync(); draw(); };
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+document.getElementById("copy").onclick = () => {
+  navigator.clipboard.writeText(document.getElementById("json").value);
+};
+document.getElementById("dl").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([document.getElementById("json").value], { type: "application/json" }));
+  a.download = "controls.json"; a.click();
+};
+document.getElementById("imp").onclick = () => {
+  try {
+    points = JSON.parse(document.getElementById("json").value).points || [];
+    for (const p of points) {           // re-snap in case the mesh changed
+      const { v } = nearestVertex(p.x * W, p.y * H);
+      if (v >= 0) { p.v = v; p.x = +(MESH.points[v][0] / W).toFixed(4); p.y = +(MESH.points[v][1] / H).toFixed(4); }
+    }
+    selected = points.length - 1;
+    sync(); draw();
+  } catch (err) { alert("JSON 解析失败: " + err.message); }
+};
+document.getElementById("undo").onclick = () => { points.pop(); if (selected >= points.length) selected = points.length - 1; sync(); draw(); };
+document.getElementById("clr").onclick = () => { points = []; selected = -1; sync(); draw(); };
+sync();
+</script>
+</body>
+</html>
