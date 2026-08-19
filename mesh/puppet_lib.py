@@ -73,6 +73,7 @@ mapping and a slight dst expansion to hide seams.
 import base64
 import json
 import os
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -261,6 +262,8 @@ def cells_to_mesh(cells, w, h):
     # first pass: register every cell corner
     for x0, y0, s in cells:
         x1, y1 = min(x0 + s, w - 1), min(y0 + s, h - 1)
+        if x1 <= x0 or y1 <= y0:
+            continue  # clipped to zero area (x0 >= w-1 or y0 >= h-1): cannot triangulate
         for px, py in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
             vertex(px, py)
     point_set = set(points)
@@ -269,6 +272,8 @@ def cells_to_mesh(cells, w, h):
     tris = []
     for x0, y0, s in cells:
         x1, y1 = min(x0 + s, w - 1), min(y0 + s, h - 1)
+        if x1 <= x0 or y1 <= y0:
+            continue  # same zero-area sliver skip as the corner pass above
         corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
         poly = []
         for e in range(4):
@@ -605,3 +610,49 @@ def build_all(char_dir):
     build_mesh(char_dir)
     render_preview(char_dir)
     make_viewer(char_dir)
+
+
+# ---------- regression self-test ----------
+
+def self_test():
+    """Regression check for the zero-area-triangle bug: a synthetic sprite with
+    opaque pixels in the last column AND last row (quadtree cells then start at
+    x0 == w-1 / y0 == h-1 and clip to zero area) must build_mesh +
+    render_preview without LinAlgError, with coverage QA passing.
+    Run: python3 puppet_lib.py"""
+    w = h = 50  # w-1 = h-1 = 49 = 7 * smallest cell: a depth-2 cell starts on the edge
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    ink = (80, 120, 200, 255)
+    d.rectangle((8, 8, 40, 40), fill=ink)      # body
+    # content touching the last column/row, backed by kept 7px cells one
+    # column/row in (so their triangles cover it) but with holes keeping every
+    # coarser edge cell partial, so the walk refines down to zero-area slivers
+    d.rectangle((42, 0, 48, 20), fill=ink)
+    d.rectangle((0, 42, 20, 48), fill=ink)
+    for hx, hy in ((45, 3), (45, 17), (3, 45), (17, 45)):
+        d.point((hx, hy), fill=(0, 0, 0, 0))
+    d.line((w - 1, 0, w - 1, 19), fill=ink)    # wisp down the last column
+    d.line((0, h - 1, 19, h - 1), fill=ink)    # wisp across the last row
+    alpha = np.array(img)[..., 3]
+
+    cells = collect_cells(alpha, w, h, [])
+    assert any(x0 >= w - 1 or y0 >= h - 1 for x0, y0, _ in cells), \
+        "test no longer exercises the last-column/row hazard"
+    _, tris, _ = cells_to_mesh(cells, w, h)
+    assert all(len({a, b, c}) == 3 for a, b, c in tris), "degenerate triangle emitted"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        img.save(os.path.join(tmp, "sprite.png"))
+        with open(os.path.join(tmp, "controls.json"), "w") as f:
+            json.dump({"points": []}, f)
+        build_mesh(tmp)
+        render_preview(tmp)  # must not raise LinAlgError
+        mesh = json.load(open(os.path.join(tmp, "mesh.json")))
+        cov = coverage_qa(mesh["points"], mesh["tris"], alpha > 100)
+    assert cov >= COVERAGE_MIN, f"coverage {cov * 100:.2f}% below {COVERAGE_MIN * 100:.0f}%"
+    print(f"self_test ok (cells {len(cells)}, tris {len(tris)}, coverage {cov * 100:.2f}%)")
+
+
+if __name__ == "__main__":
+    self_test()
