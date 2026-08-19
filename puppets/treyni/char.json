@@ -59,19 +59,19 @@
     ]
   },
   "target_amp": {
-    "vineA": 3.0,
-    "vineB": 2.0,
-    "vineC": 2.2,
-    "vineJ": 3.0,
-    "vineD": 3.5,
-    "vineE": 2.8,
-    "vineF": 2.2,
-    "vineG": 3.2,
-    "vineH": 2.6,
-    "vineI": 2.2,
-    "hair_tip": 3.0,
-    "hem": 2.5,
-    "cuff": 1.8,
-    "other": 2.0
+    "vineA": 4.04,
+    "vineB": 2.7,
+    "vineC": 2.97,
+    "vineJ": 4.04,
+    "vineD": 4.72,
+    "vineE": 3.77,
+    "vineF": 2.97,
+    "vineG": 4.31,
+    "vineH": 3.5,
+    "vineI": 2.97,
+    "hair_tip": 4.04,
+    "hem": 3.37,
+    "cuff": 2.43,
+    "other": 2.7
   }
 }
