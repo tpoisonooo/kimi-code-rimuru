@@ -77,7 +77,7 @@ rendered 1:1 at sprite resolution):
 - `puppets/shuna/` — Shuna (ponytail, miko sleeves, hakama hem) —
   `puppets/shuna/preview.gif` (202×524)
 - `puppets/treyni/` — Treyni (traveling-wave vines, hair tips, dress hem,
-  cuffs) — `puppets/treyni/preview.gif` (408×597)
+  cuffs) — `puppets/treyni/preview.gif` (546×802)
 - `puppets/trya/` — Trya (wind-blown dress, vines, peplum frills, sleeves,
   ribbon) — `puppets/trya/preview.gif` (739×1319)
 
