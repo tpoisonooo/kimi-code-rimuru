@@ -69,13 +69,17 @@ Rebuild a character after edits (from the repo root):
 python3 puppet/build_mesh.py puppets/rimuru && python3 puppet/render_mesh_preview.py puppets/rimuru && python3 puppet/make_viewer.py puppets/rimuru
 ```
 
-Characters built with the same pipeline:
+Characters built with the same pipeline (previews are 72-frame loops at 12fps,
+rendered 1:1 at sprite resolution):
 
 - `puppets/rimuru/` — Rimuru (coat hem corners, hair tips, boot/cuff fur,
-  sword tassel)
-- `puppets/shuna/` — Shuna (ponytail, miko sleeves, hakama hem)
-- `puppets/treyni/` — Treyni (traveling-wave vines, hair tips, dress hem, cuffs)
-- `puppets/trya/` — Trya (vines, dress scallops, peplum frills, sleeves, ribbon)
+  sword tassel) — `puppets/rimuru/preview.gif` (400×618)
+- `puppets/shuna/` — Shuna (ponytail, miko sleeves, hakama hem) —
+  `puppets/shuna/preview.gif` (202×524)
+- `puppets/treyni/` — Treyni (traveling-wave vines, hair tips, dress hem,
+  cuffs) — `puppets/treyni/preview.gif` (408×597)
+- `puppets/trya/` — Trya (wind-blown dress, vines, peplum frills, sleeves,
+  ribbon) — `puppets/trya/preview.gif` (739×1319)
 
 ## The skin installer (`skin/`)
 
