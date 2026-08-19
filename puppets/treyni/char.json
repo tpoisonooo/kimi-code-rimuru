@@ -1,9 +1,45 @@
 {
   "name": "Treyni",
   "motion_defaults": {
-    "vine": [
+    "vineA": [
       1.5,
       0.0
+    ],
+    "vineB": [
+      1.0,
+      2.1
+    ],
+    "vineC": [
+      0.8571428571428571,
+      4.0
+    ],
+    "vineJ": [
+      2.0,
+      1.3
+    ],
+    "vineD": [
+      3.0,
+      2.8
+    ],
+    "vineE": [
+      1.2,
+      5.1
+    ],
+    "vineF": [
+      0.75,
+      0.7
+    ],
+    "vineG": [
+      0.6666666666666666,
+      3.6
+    ],
+    "vineH": [
+      0.6,
+      5.8
+    ],
+    "vineI": [
+      1.0,
+      4.5
     ],
     "hair_tip": [
       1.0,
@@ -23,7 +59,16 @@
     ]
   },
   "target_amp": {
-    "vine": 3.5,
+    "vineA": 3.0,
+    "vineB": 2.0,
+    "vineC": 2.2,
+    "vineJ": 3.0,
+    "vineD": 3.5,
+    "vineE": 2.8,
+    "vineF": 2.2,
+    "vineG": 3.2,
+    "vineH": 2.6,
+    "vineI": 2.2,
     "hair_tip": 3.0,
     "hem": 2.5,
     "cuff": 1.8,
