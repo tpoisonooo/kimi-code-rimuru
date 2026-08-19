@@ -1,0 +1,41 @@
+{
+  "name": "Rimuru",
+  "exclude_labels": ["tassel"],
+  "motion_defaults": {
+    "hair_tip": [1.0, 4.0],
+    "hem": [1.0, 0.6],
+    "boot_fur": [1.15, 0.9],
+    "cuff": [0.95, 1.7],
+    "other": [1.0, 0.0]
+  },
+  "target_amp": {
+    "hair_tip": 3.0,
+    "hem": 2.5,
+    "boot_fur": 2.2,
+    "cuff": 1.8,
+    "other": 2.0
+  },
+  "amp_scale_override": {
+    "hair_tip_0": 0.65,
+    "hair_tip_1": 0.65,
+    "hair_tip_2": 0.65,
+    "hair_tip_6": 0.65
+  },
+  "erase_polys": [
+    [
+      [0.840, 0.432], [0.855, 0.432], [0.858, 0.458], [0.866, 0.478],
+      [0.863, 0.503], [0.848, 0.516], [0.829, 0.516], [0.815, 0.500],
+      [0.817, 0.475], [0.828, 0.455], [0.836, 0.440]
+    ]
+  ],
+  "strip_patch": {
+    "file": "tassel_patch.png",
+    "x": 313,
+    "y": 247,
+    "amp_x": 4.0,
+    "amp_y": 0.5,
+    "period": 1.1,
+    "phase": 1.2,
+    "exp": 1.5
+  }
+}
