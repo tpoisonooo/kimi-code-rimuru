@@ -4,7 +4,7 @@
 The source is already RGBA on a transparent background, so this only trims
 the transparent margins, keeping a small padding so silhouette tips stay off
 the image edge. Full HD: NO downscale (the old 400x589 sprite was a 0.74x
-reduction; this keeps the native 546x820 resolution, trimmed to 547x802).
+reduction; this keeps the native 546x820 resolution, trimmed to 546x802).
 """
 from pathlib import Path
 
