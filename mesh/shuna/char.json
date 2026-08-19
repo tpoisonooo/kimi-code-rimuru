@@ -3,13 +3,13 @@
   "motion_defaults": {
     "hair_tip": [1.0, 4.0],
     "sleeve": [0.95, 1.7],
-    "hem": [1.2, 0.6],
+    "hem": [1.7, 0.6],
     "other": [1.0, 0.0]
   },
   "target_amp": {
     "hair_tip": 3.0,
     "sleeve": 1.8,
-    "hem": 2.2,
+    "hem": 4.5,
     "other": 2.0
   }
 }
