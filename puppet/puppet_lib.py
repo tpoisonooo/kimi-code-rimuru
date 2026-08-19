@@ -3,8 +3,8 @@
 
 Character directory convention
 ------------------------------
-A character lives in its own directory (e.g. mesh/ for Rimuru, mesh/shuna/ for
-another character). The directory holds:
+A character lives in its own directory under puppets/ (e.g. puppets/rimuru/
+for Rimuru, puppets/shuna/ for Shuna). The directory holds:
 
     sprite.png       (input, required)  RGBA character sprite, transparent bg
     controls.json    (input, required)  annotated control points:

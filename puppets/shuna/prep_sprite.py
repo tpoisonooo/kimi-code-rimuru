@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare mesh/shuna/sprite.png from resources/Shuna__anime_full_body.png.
+"""Prepare puppets/shuna/sprite.png from resources/Shuna__anime_full_body.png.
 
 The source is already RGBA on a transparent background (single connected
 component, no stray pixels), so this only trims the transparent margins,

@@ -38,37 +38,68 @@ Notes:
     and warns on re-apply; --check reports CHANGED in that case. 
 ```
 
-## How it's made (`mesh/`)
+## How it's made (`puppet/` + `puppets/`)
 
-Full pipeline + results live in `mesh/`:
+The shared engine lives in `puppet/`; each character is self-contained in its
+own `puppets/<char>/` directory:
 
-- `puppet_lib.py` — the shared engine: sprite → quadtree grid mesh (28/14/7px),
-  contour snapping, coverage QA (≥99%), control glue, per-label amplitude
-  normalization, IDW deform + GIF/stills render, viewer generation
-  (`python3 mesh/puppet_lib.py` runs a self-test)
-- `char.json` — per-character config (Rimuru's tuning: amplitude tables, tassel
-  erase polys + strip patch); new characters can omit it entirely
-- `build_mesh.py` / `render_mesh_preview.py` / `make_viewer.py` — thin wrappers,
-  `python3 <script> [char_dir]` (default: `mesh/` itself, i.e. Rimuru)
-- `controls.json` — hand-annotated control points (via `annotate.html`)
-- `viewer.tpl.html` / `viewer.html` — standalone animation page
-- `annotate.tpl.html` / `annotate.html` — control-point annotation tool
-- `mesh.json`, `mesh_debug.png` — generated mesh + overlay
-- `sprite.png` / `sprite_meshed.png` / `tassel_patch.png` — keyed sprite assets
+- `puppet/puppet_lib.py` — the shared engine: sprite → quadtree grid mesh
+  (28/14/7px), contour snapping, coverage QA (≥99%), control glue, per-label
+  amplitude normalization, IDW deform + GIF/stills render, viewer generation
+  (`python3 puppet/puppet_lib.py` runs a self-test)
+- `puppet/build_mesh.py` / `render_mesh_preview.py` / `make_viewer.py` /
+  `make_annotate.py` — thin wrappers, `python3 puppet/<script> [char_dir]`
+  (default: `puppets/rimuru`)
+- `puppet/viewer.tpl.html` / `annotate.tpl.html` — shared templates for the
+  standalone animation page and the control-point annotation tool
+- `puppets/<char>/sprite.png` — keyed sprite (input)
+- `puppets/<char>/controls.json` — hand-annotated control points (via
+  `annotate.html`)
+- `puppets/<char>/char.json` — per-character tuning (Rimuru's: amplitude
+  tables, tassel erase polys + strip patch); new characters can omit it
+  entirely
+- `puppets/<char>/mesh.json`, `mesh_debug.png`, `sprite_meshed.png`,
+  `preview.gif`, `still_*.png`, `viewer.html` — generated outputs
+- `puppets/rimuru/` additionally holds `tassel_patch.png` and the generated
+  `annotate.html`
 
-Rebuild after edits:
+Rebuild a character after edits (from the repo root):
 
 ```
-python3 build_mesh.py && python3 render_mesh_preview.py && python3 make_viewer.py
+python3 puppet/build_mesh.py puppets/rimuru && python3 puppet/render_mesh_preview.py puppets/rimuru && python3 puppet/make_viewer.py puppets/rimuru
 ```
 
-More puppets built with the same pipeline, each self-contained in its own
-character directory (`sprite.png` + `controls.json` + `char.json` + generated
-`mesh.json` / `preview.gif` / stills / `viewer.html`):
+Characters built with the same pipeline:
 
-- `mesh/shuna/` — Shuna (ponytail, miko sleeves, hakama hem)
-- `mesh/treyni/` — Treyni (traveling-wave vines, hair tips, dress hem, cuffs)
-- `mesh/trya/` — Trya (vines, dress scallops, peplum frills, sleeves, ribbon)
+- `puppets/rimuru/` — Rimuru (coat hem corners, hair tips, boot/cuff fur,
+  sword tassel)
+- `puppets/shuna/` — Shuna (ponytail, miko sleeves, hakama hem)
+- `puppets/treyni/` — Treyni (traveling-wave vines, hair tips, dress hem, cuffs)
+- `puppets/trya/` — Trya (vines, dress scallops, peplum frills, sleeves, ribbon)
+
+## The skin installer (`skin/`)
+
+`rimuru_skin_install.py` is a self-contained single file: the Rimuru skin
+assets are base64-embedded in its `PAYLOAD` dict. The production sources live
+in `skin/`, one file per embedded asset:
+
+- `skin/skin.js` — the web-UI widget (fetches the other assets from
+  `/rimuru-skin/` at runtime)
+- `skin/mesh.json` / `sprite_meshed.png` / `tassel_patch.png` — frozen
+  snapshots of the Rimuru puppet build, deliberately decoupled from the
+  pipeline: rebuilding `puppets/rimuru` does not change the installer
+- `skin/make_installer.py` — regenerates the installer's `PAYLOAD` block from
+  these sources (`--check` only reports staleness, exit 1)
+
+After editing anything in `skin/`, regenerate + verify the installer:
+
+```
+python3 skin/make_installer.py && python3 rimuru_skin_install.py --help
+```
+
+To ship a newer puppet build, copy `puppets/rimuru/mesh.json`,
+`sprite_meshed.png` and `tassel_patch.png` over the `skin/` snapshots first,
+then regenerate.
 
 Note: the character artwork is official material — fine for internal use,
 swap in your own licensed art before public redistribution (the pipeline is
