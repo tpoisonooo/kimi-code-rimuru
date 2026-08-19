@@ -1,19 +1,70 @@
 {
   "name": "Trya",
   "motion_defaults": {
-    "hair_tip": [1.0, 4.0],
-    "vine": [1.8, 0.8],
-    "hem": [1.2, 0.6],
-    "skirt": [1.1, 1.4],
-    "sleeve": [1.0, 2.2],
-    "ribbon": [0.9, 3.0],
-    "other": [1.0, 0.0]
+    "hair_tip": [
+      1.0,
+      4.0
+    ],
+    "vine": [
+      1.8,
+      0.8
+    ],
+    "vine_dress": [
+      6.0,
+      1.2
+    ],
+    "skirt": [
+      6.0,
+      0.0
+    ],
+    "dress1": [
+      6.0,
+      0.5
+    ],
+    "dress2": [
+      6.0,
+      1.0
+    ],
+    "dress3": [
+      6.0,
+      1.5
+    ],
+    "dress4": [
+      6.0,
+      2.0
+    ],
+    "dress5": [
+      6.0,
+      2.25
+    ],
+    "hem": [
+      6.0,
+      2.5
+    ],
+    "sleeve": [
+      1.0,
+      2.2
+    ],
+    "ribbon": [
+      0.9,
+      3.0
+    ],
+    "other": [
+      1.0,
+      0.0
+    ]
   },
   "target_amp": {
     "hair_tip": 2.5,
     "vine": 4.0,
-    "hem": 3.0,
-    "skirt": 2.5,
+    "vine_dress": 3.0,
+    "skirt": 3.5,
+    "dress1": 4.5,
+    "dress2": 5.5,
+    "dress3": 7.0,
+    "dress4": 8.5,
+    "dress5": 9.5,
+    "hem": 11.0,
     "sleeve": 2.0,
     "ribbon": 1.5,
     "other": 2.0
