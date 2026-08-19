@@ -42,10 +42,15 @@ Notes:
 
 Full pipeline + results live in `mesh/`:
 
-- `build_mesh.py` — sprite → quadtree grid mesh (28/14/7px), contour snapping,
-  coverage QA (≥99%), control glue, per-label amplitude normalization
+- `puppet_lib.py` — the shared engine: sprite → quadtree grid mesh (28/14/7px),
+  contour snapping, coverage QA (≥99%), control glue, per-label amplitude
+  normalization, IDW deform + GIF/stills render, viewer generation
+  (`python3 mesh/puppet_lib.py` runs a self-test)
+- `char.json` — per-character config (Rimuru's tuning: amplitude tables, tassel
+  erase polys + strip patch); new characters can omit it entirely
+- `build_mesh.py` / `render_mesh_preview.py` / `make_viewer.py` — thin wrappers,
+  `python3 <script> [char_dir]` (default: `mesh/` itself, i.e. Rimuru)
 - `controls.json` — hand-annotated control points (via `annotate.html`)
-- `render_mesh_preview.py` — offline renderer → `preview.gif` + stills
 - `viewer.tpl.html` / `viewer.html` — standalone animation page
 - `annotate.tpl.html` / `annotate.html` — control-point annotation tool
 - `mesh.json`, `mesh_debug.png` — generated mesh + overlay
@@ -56,6 +61,14 @@ Rebuild after edits:
 ```
 python3 build_mesh.py && python3 render_mesh_preview.py && python3 make_viewer.py
 ```
+
+More puppets built with the same pipeline, each self-contained in its own
+character directory (`sprite.png` + `controls.json` + `char.json` + generated
+`mesh.json` / `preview.gif` / stills / `viewer.html`):
+
+- `mesh/shuna/` — Shuna (ponytail, miko sleeves, hakama hem)
+- `mesh/treyni/` — Treyni (traveling-wave vines, hair tips, dress hem, cuffs)
+- `mesh/trya/` — Trya (vines, dress scallops, peplum frills, sleeves, ribbon)
 
 Note: the character artwork is official material — fine for internal use,
 swap in your own licensed art before public redistribution (the pipeline is
