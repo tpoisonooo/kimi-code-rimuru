@@ -1,0 +1,32 @@
+{
+  "name": "Treyni",
+  "motion_defaults": {
+    "vine": [
+      1.5,
+      0.0
+    ],
+    "hair_tip": [
+      1.0,
+      4.0
+    ],
+    "hem": [
+      1.2,
+      0.6
+    ],
+    "cuff": [
+      1.0,
+      1.7
+    ],
+    "other": [
+      1.0,
+      0.0
+    ]
+  },
+  "target_amp": {
+    "vine": 3.5,
+    "hair_tip": 3.0,
+    "hem": 2.5,
+    "cuff": 1.8,
+    "other": 2.0
+  }
+}
