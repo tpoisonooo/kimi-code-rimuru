@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>Rimuru mesh puppet</title>
+<title>__TITLE__</title>
 <style>
   body { margin: 0; min-height: 100vh; background: #17191d; display: flex; align-items: center; justify-content: center; }
   canvas { display: block; }
@@ -16,9 +16,10 @@
 const SPRITE = "__SPRITE_B64__";
 const TASSEL_IMG = "__TASSEL_B64__";
 const MESH = __MESH_JSON__;
-// tassel uses the rimuru-skin strip scheme: one feathered patch, row strips
-// with a bottom-weighted ramp — the bead stays rigid because its texture is solid
-const TASSEL = { x: 313, y: 247, w: 46, h: 84, amp_x: 4.0, amp_y: 0.5, period: 1.1, phase: 1.2, exp: 1.5 };
+// optional strip-warped patch drawn on top of the mesh (e.g. Rimuru's tassel):
+// one feathered patch, row strips with a bottom-weighted ramp — a solid-texture
+// region stays rigid. null when the character has no such patch.
+const TASSEL = __STRIP_JSON__;
 const VIEW = 1.0;
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 const img = new Image(), timg = new Image();
@@ -133,8 +134,8 @@ function draw(t, k) {
     const d = expandTri([[dp[a * 2], dp[a * 2 + 1]], [dp[b * 2], dp[b * 2 + 1]], [dp[c * 2], dp[c * 2 + 1]]], 0.8);
     drawTri(ctx, s, d, k);
   }
-  // tassel patch on top (strip warp, same params as the rimuru-skin version)
-  {
+  // strip patch on top (row-strip warp), when the character has one
+  if (TASSEL) {
     const ang = 2 * Math.PI * t / TASSEL.period + TASSEL.phase;
     const sx = Math.sin(ang), sy = Math.cos(ang);
     ctx.save();
@@ -188,11 +189,11 @@ function start() {
   requestAnimationFrame(frame);
 }
 let loaded = 0;
-function onload() { if (++loaded === 2) start(); }
+const NEED = TASSEL ? 2 : 1;
+function onload() { if (++loaded === NEED) start(); }
 img.onload = onload;
-timg.onload = onload;
 img.src = SPRITE;
-timg.src = TASSEL_IMG;
+if (TASSEL) { timg.onload = onload; timg.src = TASSEL_IMG; }
 </script>
 </body>
 </html>
