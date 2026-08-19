@@ -92,23 +92,46 @@ function expandTri(d, pad) {
   });
 }
 
+function drawTri(ctx, s, d, k) {
+  ctx.save();
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  ctx.beginPath();
+  ctx.moveTo(d[0][0], d[0][1]); ctx.lineTo(d[1][0], d[1][1]); ctx.lineTo(d[2][0], d[2][1]);
+  ctx.closePath();
+  ctx.clip();
+  const m = affineFwd(s, d);
+  ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+let staCv = null, dynTris = [];
+
+function bakeStatic() {
+  // triangles whose vertices never move are drawn once into an offscreen canvas
+  staCv = document.createElement("canvas");
+  staCv.width = MESH.width; staCv.height = MESH.height;
+  const sctx = staCv.getContext("2d");
+  dynTris = [];
+  for (const tri of MESH.tris) {
+    const moving = tri.some(v => WTS[v].some(w => w > 0));
+    if (moving) { dynTris.push(tri); continue; }
+    const s = [MESH.points[tri[0]], MESH.points[tri[1]], MESH.points[tri[2]]];
+    drawTri(sctx, s, expandTri(s.map(p => [...p]), 0.8), 1);
+  }
+}
+
 function draw(t, k) {
   const dp = displaced(t);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, cv.width, cv.height);
-  for (const [a, b, c] of MESH.tris) {
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  ctx.drawImage(staCv, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (const [a, b, c] of dynTris) {
     const s = [MESH.points[a], MESH.points[b], MESH.points[c]];
     const d = expandTri([[dp[a * 2], dp[a * 2 + 1]], [dp[b * 2], dp[b * 2 + 1]], [dp[c * 2], dp[c * 2 + 1]]], 0.8);
-    ctx.save();
-    ctx.setTransform(k, 0, 0, k, 0, 0);
-    ctx.beginPath();
-    ctx.moveTo(d[0][0], d[0][1]); ctx.lineTo(d[1][0], d[1][1]); ctx.lineTo(d[2][0], d[2][1]);
-    ctx.closePath();
-    ctx.clip();
-    const m = affineFwd(s, d);
-    ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
-    ctx.drawImage(img, 0, 0);
-    ctx.restore();
+    drawTri(ctx, s, d, k);
   }
   // tassel patch on top (strip warp, same params as the rimuru-skin version)
   {
@@ -147,6 +170,7 @@ function start() {
   cv.style.width = MESH.width * VIEW + "px";
   cv.style.height = MESH.height * VIEW + "px";
   buildWeights();
+  bakeStatic();
   document.getElementById("wire").onchange = () => draw(lastT, k);
 
   const pin = new URLSearchParams(location.search).get("t0");

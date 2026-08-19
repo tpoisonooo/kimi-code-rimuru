@@ -17,7 +17,6 @@ import os
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
-from scipy.ndimage import binary_erosion, map_coordinates
 from skimage.measure import find_contours
 
 OUT = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +24,6 @@ SPRITE = os.path.join(OUT, "sprite.png")
 
 CELL = 28           # coarse grid px
 MAX_DEPTH = 2       # 28 -> 14 -> 7
-SUB = 3.5           # coverage subsample step px
 CTRL_MARGIN = 8     # extra px around control disks forcing refinement
 SNAP_DIST = 8       # max px a boundary vertex may jump to the contour
 
@@ -123,14 +121,17 @@ def load_controls(w, h):
 
 # ---------- quadtree mesher ----------
 
-def coverage(alpha, x0, y0, s):
-    """Fraction of subsamples inside the cell that are opaque."""
-    n = max(2, int(s / SUB))
-    xs = x0 + (np.arange(n) + 0.5) * s / n
-    ys = y0 + (np.arange(n) + 0.5) * s / n
-    gx, gy = np.meshgrid(xs, ys)
-    vals = map_coordinates(alpha.astype(float), [gy.ravel(), gx.ravel()], order=1, mode="constant")
-    return float((vals > 100).mean())
+def classify(alpha, x0, y0, x1, y1):
+    """Exact cell coverage at full resolution — subsampling misses thin wisps."""
+    sub = alpha[int(y0):int(y1), int(x0):int(x1)]
+    if sub.size == 0:
+        return "none"
+    opaque = sub > 100
+    if not opaque.any():
+        return "none"
+    if opaque.all():
+        return "full"
+    return "partial"
 
 
 def near_control(x0, y0, s, controls):
@@ -148,14 +149,11 @@ def collect_cells(alpha, w, h, controls):
     def walk(x0, y0, s, depth):
         if x0 >= w or y0 >= h:
             return
-        cov = coverage(alpha, x0, y0, s)
-        if cov == 0.0:
+        kind = classify(alpha, x0, y0, min(x0 + s, w), min(y0 + s, h))
+        if kind == "none":
             return
-        if cov >= 0.94:
+        if kind == "full" or depth >= MAX_DEPTH or s <= 7:
             cells.append((x0, y0, s))
-            return
-        if depth >= MAX_DEPTH or s <= 7:
-            cells.append((x0, y0, s))   # finest partial cell: keep, snap fixes edge
             return
         half = s / 2
         walk(x0, y0, half, depth + 1)
@@ -167,7 +165,7 @@ def collect_cells(alpha, w, h, controls):
     def walk_forced(x0, y0, s, depth):
         if x0 >= w or y0 >= h:
             return
-        if coverage(alpha, x0, y0, s) == 0.0:
+        if classify(alpha, x0, y0, min(x0 + s, w), min(y0 + s, h)) == "none":
             return
         if near_control(x0, y0, s, controls) and depth < MAX_DEPTH:
             half = s / 2
@@ -185,9 +183,11 @@ def collect_cells(alpha, w, h, controls):
 
 
 def cells_to_mesh(cells, w, h):
+    """Perimeter-fan triangulation per cell, with T-junction midpoints included:
+    any vertex lying on a cell edge is inserted into that edge's polygon chain,
+    so coarse/fine level transitions stay watertight by construction."""
     vid = {}
     points = []
-    tris = []
 
     def vertex(x, y):
         key = (round(x, 1), round(y, 1))
@@ -196,14 +196,43 @@ def cells_to_mesh(cells, w, h):
             points.append(key)
         return vid[key]
 
+    # first pass: register every cell corner
     for x0, y0, s in cells:
         x1, y1 = min(x0 + s, w - 1), min(y0 + s, h - 1)
-        a = vertex(x0, y0)
-        b = vertex(x1, y0)
-        c = vertex(x1, y1)
-        d = vertex(x0, y1)
-        tris.append([a, b, c])
-        tris.append([a, c, d])
+        for px, py in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+            vertex(px, py)
+    point_set = set(points)
+    step = CELL / (2 ** MAX_DEPTH)
+
+    tris = []
+    for x0, y0, s in cells:
+        x1, y1 = min(x0 + s, w - 1), min(y0 + s, h - 1)
+        corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+        poly = []
+        for e in range(4):
+            ax, ay = corners[e]
+            bx, by = corners[(e + 1) % 4]
+            poly.append((ax, ay))
+            # midpoints contributed by finer neighbors along this edge
+            dx, dy = (1 if bx > ax else -1 if bx < ax else 0), (1 if by > ay else -1 if by < ay else 0)
+            t = step
+            while t < s:
+                mx, my = ax + dx * t, ay + dy * t
+                key = (round(mx, 1), round(my, 1))
+                if key in point_set:
+                    poly.append(key)
+                t += step
+        cx = sum(p[0] for p in poly) / len(poly)
+        cy = sum(p[1] for p in poly) / len(poly)
+        ids = [vertex(px, py) for px, py in poly]
+        if len(ids) == 4:
+            # no T-junction midpoints: plain quad split
+            tris.append([ids[0], ids[1], ids[2]])
+            tris.append([ids[0], ids[2], ids[3]])
+            continue
+        c = vertex(round(cx, 1), round(cy, 1))
+        for i in range(len(ids)):
+            tris.append([c, ids[i], ids[(i + 1) % len(ids)]])
     return points, tris, vid
 
 
