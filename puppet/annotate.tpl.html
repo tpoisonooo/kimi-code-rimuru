@@ -52,7 +52,7 @@ const LABELS = { tassel: "#e91e63", hair_tip: "#2196f3", hem: "#43a047",
                  boot_fur: "#fb8c00", cuff: "#8e24aa", other: "#78909c" };
 const SNAP_PX = 30;
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
-let scale = 2, points = [], curLabel = "hem", drag = null, selected = -1, hoverV = -1;
+let scale = 2, points = __CONTROLS_JSON__, curLabel = "hem", drag = null, selected = -1, hoverV = -1;
 let showMesh = true;
 const img = new Image();
 img.onload = () => { resize(); draw(); };
